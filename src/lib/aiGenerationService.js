@@ -3,12 +3,19 @@
  * Handles all AI generation endpoints: general, healthcare, education
  * Supports all modes: chat, debate, project
  * Production-grade with streaming, error handling, rate limits
+ * 
+ * IMPORTANT: Conversation endpoint locking ensures that once a conversation
+ * starts with a specific endpoint (edu/generate, healthcare, etc.), it continues
+ * with the same endpoint for all subsequent messages to maintain context.
  */
 
 import logger from './logger'
 import { getApiKeyForRequest } from './authService'
 
 const API_BASE_URL = 'https://api.neodalsi.com'
+
+// Store conversation endpoint types to maintain consistency
+const conversationEndpoints = new Map()
 
 /**
  * Build headers for API request
@@ -104,21 +111,21 @@ export const generateAIResponse = async (message, options = {}) => {
 }
 
 /**
- * Generate healthcare AI response
- * @param {string} message - Healthcare question
- * @param {Object} options - { mode, grade_level, session_id }
- * @returns {Promise<Object>} Healthcare AI response with disclaimer
+ * Generate healthcare response
+ * @param {string} message - User prompt
+ * @param {Object} options - { mode, use_history, session_id }
+ * @returns {Promise<Object>} Healthcare response
  */
 export const generateHealthcareResponse = async (message, options = {}) => {
   const {
     mode = 'chat',
-    grade_level = 'general',
+    use_history = true,
     session_id = null
   } = options
 
   try {
     logger.info('🏥 [AI_SERVICE] Generating healthcare response...')
-    logger.debug('📝 [AI_SERVICE] Grade level:', grade_level)
+    logger.debug('📝 [AI_SERVICE] Mode:', mode)
 
     // Get authentication
     const authKey = await getApiKeyForRequest()
@@ -128,7 +135,7 @@ export const generateHealthcareResponse = async (message, options = {}) => {
     const body = {
       message,
       mode,
-      grade_level,
+      use_history,
       ...(session_id && { session_id })
     }
 
@@ -163,7 +170,6 @@ export const generateHealthcareResponse = async (message, options = {}) => {
       mode,
       category: 'healthcare',
       data,
-      medical_disclaimer: data.medical_disclaimer || 'This is not medical advice. Please consult a healthcare professional.',
       timestamp: new Date().toISOString()
     }
 
@@ -174,16 +180,17 @@ export const generateHealthcareResponse = async (message, options = {}) => {
 }
 
 /**
- * Generate education AI response
- * @param {string} message - Educational question
- * @param {Object} options - { mode, grade_level, session_id }
- * @returns {Promise<Object>} Education AI response
+ * Generate education response
+ * @param {string} message - User prompt
+ * @param {Object} options - { mode, use_history, session_id, grade_level }
+ * @returns {Promise<Object>} Education response
  */
 export const generateEducationResponse = async (message, options = {}) => {
   const {
     mode = 'chat',
-    grade_level = 'general',
-    session_id = null
+    use_history = true,
+    session_id = null,
+    grade_level = 'general'
   } = options
 
   try {
@@ -198,6 +205,7 @@ export const generateEducationResponse = async (message, options = {}) => {
     const body = {
       message,
       mode,
+      use_history,
       grade_level,
       ...(session_id && { session_id })
     }
@@ -324,19 +332,51 @@ export const detectQueryType = (message) => {
 }
 
 /**
+ * Get or lock the endpoint type for a conversation
+ * First message determines the endpoint for the entire conversation
+ * Subsequent messages use the locked endpoint to maintain context
+ * @param {string} sessionId - Conversation session ID
+ * @param {string} detectedType - Detected query type (only used if not set)
+ * @returns {string} Locked endpoint type for this conversation
+ */
+const getConversationEndpoint = (sessionId, detectedType) => {
+  if (!sessionId) {
+    // No session, use detected type
+    return detectedType
+  }
+
+  // Check if we already have an endpoint for this conversation
+  if (conversationEndpoints.has(sessionId)) {
+    const lockedEndpoint = conversationEndpoints.get(sessionId)
+    logger.info(`🔒 [AI_SERVICE] Using locked endpoint for conversation: ${lockedEndpoint}`)
+    return lockedEndpoint
+  }
+
+  // First message in conversation - lock the endpoint
+  conversationEndpoints.set(sessionId, detectedType)
+  logger.info(`🔐 [AI_SERVICE] Locking endpoint for conversation: ${detectedType}`)
+  return detectedType
+}
+
+/**
  * Smart generate - auto-detects query type and routes appropriately
+ * CRITICAL: Once a conversation starts with an endpoint, it continues with that endpoint
+ * This ensures context is maintained and the AI model is aware of previous responses
  * @param {string} message - User message
  * @param {Object} options - { mode, use_history, session_id, autoDetect }
  * @returns {Promise<Object>} AI response
  */
 export const smartGenerate = async (message, options = {}) => {
   const { autoDetect = true, ...otherOptions } = options
+  const { session_id } = otherOptions
 
   try {
     let queryType = 'general'
 
     if (autoDetect) {
-      queryType = detectQueryType(message)
+      const detectedType = detectQueryType(message)
+      // Get or lock the endpoint for this conversation
+      queryType = getConversationEndpoint(session_id, detectedType)
     }
 
     logger.info(`🧠 [AI_SERVICE] Smart generate using ${queryType} endpoint`)
