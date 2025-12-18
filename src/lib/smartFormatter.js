@@ -103,6 +103,25 @@ function hasNaturalSections(text) {
 }
 
 /**
+ * Check if text looks like a header/introduction
+ */
+function isHeaderLike(text) {
+  // Short text that ends with colon
+  if (text.length < 100 && text.trim().endsWith(':')) {
+    return true
+  }
+  
+  // Opening statements like "Certainly!", "Let me...", "Here's...", etc.
+  const headerPatterns = [
+    /^(Certainly|Sure|Absolutely|Let me|Here's|Here are|Below|Following|Above|Next|First|Finally|Additionally|Furthermore|Moreover|In summary|To summarize)/i,
+    /^[A-Z][^.!?]*:$/,  // Ends with colon
+    /^(Introduction|Overview|Summary|Conclusion|Note|Important|Key Point)/i
+  ]
+  
+  return headerPatterns.some(pattern => pattern.test(text.trim()))
+}
+
+/**
  * Split text into natural paragraphs
  */
 function splitIntoParagraphs(text) {
@@ -166,11 +185,19 @@ export function smartFormatText(text) {
   // For marketing content: Keep it as-is with minimal formatting
   if (contentType === 'marketing') {
     paragraphs.forEach((para, idx) => {
-      result.push({
-        type: 'paragraph',
-        content: applyBoldFormatting(para),
-        preserveFlow: true  // Don't add headers
-      })
+      // Check if first paragraph looks like a header
+      if (idx === 0 && isHeaderLike(para)) {
+        result.push({
+          type: 'header',
+          content: para.replace(/:$/, '')  // Remove trailing colon
+        })
+      } else {
+        result.push({
+          type: 'paragraph',
+          content: applyBoldFormatting(para),
+          preserveFlow: true  // Don't add headers
+        })
+      }
     })
     return result
   }
@@ -178,11 +205,19 @@ export function smartFormatText(text) {
   // For narrative content: Keep natural flow
   if (contentType === 'narrative') {
     paragraphs.forEach((para, idx) => {
-      result.push({
-        type: 'paragraph',
-        content: applyBoldFormatting(para),
-        preserveFlow: true
-      })
+      // Check if first paragraph looks like a header
+      if (idx === 0 && isHeaderLike(para)) {
+        result.push({
+          type: 'header',
+          content: para.replace(/:$/, '')  // Remove trailing colon
+        })
+      } else {
+        result.push({
+          type: 'paragraph',
+          content: applyBoldFormatting(para),
+          preserveFlow: true
+        })
+      }
     })
     return result
   }
@@ -235,11 +270,19 @@ export function smartFormatText(text) {
   }
   
   // Default: Return as paragraphs with formatting
-  paragraphs.forEach((para) => {
-    result.push({
-      type: 'paragraph',
-      content: applyBoldFormatting(para)
-    })
+  paragraphs.forEach((para, idx) => {
+    // Check if first paragraph looks like a header
+    if (idx === 0 && isHeaderLike(para)) {
+      result.push({
+        type: 'header',
+        content: para.replace(/:$/, '')  // Remove trailing colon
+      })
+    } else {
+      result.push({
+        type: 'paragraph',
+        content: applyBoldFormatting(para)
+      })
+    }
   })
   
   return result.filter(item => item && item.content && item.content.length > 0)

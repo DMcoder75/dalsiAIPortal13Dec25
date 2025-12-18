@@ -48,6 +48,15 @@ export const FormattedResponseContent = ({ text }) => {
   return (
     <div className="space-y-6 text-white">
       {formattedItems.map((item, idx) => {
+        // Handle standalone headers
+        if (item.type === 'header') {
+          return (
+            <h2 key={idx} className="text-lg font-semibold text-white mt-4 mb-3 border-b border-purple-500/30 pb-2">
+              {item.content}
+            </h2>
+          )
+        }
+
         // Handle regular paragraphs
         if (item.type === 'paragraph') {
           return (
