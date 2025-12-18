@@ -50,7 +50,7 @@ export const ChatModeResponse = ({ response, references, followups, onFollowupCl
           <div className="flex items-center gap-2 mb-4">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-blue-400" />
-              <h3 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-cyan-300 to-blue-400 tracking-wide">
+              <h3 className="text-sm font-bold text-white tracking-wide">
                 REFERENCES & SOURCES
               </h3>
             </div>
@@ -103,7 +103,7 @@ export const ChatModeResponse = ({ response, references, followups, onFollowupCl
           <div className="flex items-center gap-2 mb-4">
             <div className="flex items-center gap-2">
               <MessageCircle className="w-4 h-4 text-purple-400" />
-              <h3 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-300 to-purple-400 tracking-wide">
+              <h3 className="text-sm font-bold text-white tracking-wide">
                 FOLLOW-UP QUESTIONS
               </h3>
             </div>
