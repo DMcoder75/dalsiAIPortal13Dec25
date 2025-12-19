@@ -7,6 +7,7 @@
 import React from 'react'
 import { smartFormatText, parseFormattedText } from '../lib/smartFormatter'
 import { Sparkles } from 'lucide-react'
+import TableRenderer from './TableRenderer'
 
 /**
  * Render formatted text with bold and italic
@@ -58,6 +59,17 @@ export const FormattedResponseContent = ({ text }) => {
 
       {/* Response Content */}
       {formattedItems.map((item, idx) => {
+        // Handle tables
+        if (item.type === 'table') {
+          return (
+            <TableRenderer
+              key={idx}
+              headers={item.headers}
+              rows={item.rows}
+            />
+          )
+        }
+
         // Handle standalone headers
         if (item.type === 'header') {
           return (

@@ -100,6 +100,87 @@ function isHeaderLike(text) {
 }
 
 /**
+ * Detect if text contains a Markdown table
+ */
+function hasMarkdownTable(text) {
+  const lines = text.split('\n')
+  // Look for table pattern: | header | header | ... and | --- | --- |
+  for (let i = 0; i < lines.length - 1; i++) {
+    const line = lines[i].trim()
+    const nextLine = lines[i + 1].trim()
+    
+    if (line.startsWith('|') && nextLine.startsWith('|')) {
+      // Check if next line is separator (contains dashes and pipes)
+      if (/^\|[\s\-|:]+\|$/.test(nextLine)) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+/**
+ * Parse Markdown table and return structured data
+ */
+function parseMarkdownTable(text) {
+  const lines = text.split('\n')
+  let tableStartIdx = -1
+  let tableEndIdx = -1
+  
+  // Find table boundaries
+  for (let i = 0; i < lines.length - 1; i++) {
+    const line = lines[i].trim()
+    const nextLine = lines[i + 1].trim()
+    
+    if (line.startsWith('|') && nextLine.startsWith('|')) {
+      if (/^\|[\s\-|:]+\|$/.test(nextLine)) {
+        tableStartIdx = i
+        break
+      }
+    }
+  }
+  
+  if (tableStartIdx === -1) return null
+  
+  // Find end of table
+  tableEndIdx = tableStartIdx + 2
+  while (tableEndIdx < lines.length && lines[tableEndIdx].trim().startsWith('|')) {
+    tableEndIdx++
+  }
+  tableEndIdx--
+  
+  const tableLines = lines.slice(tableStartIdx, tableEndIdx + 1)
+  
+  // Parse headers
+  const headerLine = tableLines[0].trim()
+  const headers = headerLine
+    .split('|')
+    .map(h => h.trim())
+    .filter(h => h.length > 0)
+  
+  // Parse rows
+  const rows = []
+  for (let i = 2; i < tableLines.length; i++) {
+    const rowLine = tableLines[i].trim()
+    const cells = rowLine
+      .split('|')
+      .map(c => c.trim())
+      .filter((c, idx) => idx > 0 && idx < headers.length + 1)
+    
+    if (cells.length === headers.length) {
+      rows.push(cells)
+    }
+  }
+  
+  return {
+    headers,
+    rows,
+    startIdx: tableStartIdx,
+    endIdx: tableEndIdx
+  }
+}
+
+/**
  * Detect if text contains a numbered list
  * Only matches numbers at the start of a line (not in middle of text like "CO2.")
  */
@@ -183,10 +264,60 @@ export function smartFormatText(text) {
   if (!text || typeof text !== 'string') return []
   
   const contentType = detectContentType(text)
+  const hasTable = hasMarkdownTable(text)
   const hasLists = hasNumberedList(text)
   const paragraphs = splitIntoParagraphs(text)
   
   const result = []
+  
+  // If text contains a Markdown table, extract and format it
+  if (hasTable) {
+    const tableData = parseMarkdownTable(text)
+    if (tableData) {
+      // Add content before table
+      const beforeTable = text.substring(0, text.indexOf(text.split('\n')[tableData.startIdx])).trim()
+      if (beforeTable) {
+        const beforeParagraphs = beforeTable.split(/\n\n+/).filter(p => p.trim())
+        beforeParagraphs.forEach((para, idx) => {
+          if (idx === 0 && isHeaderLike(para)) {
+            result.push({
+              type: 'header',
+              content: para.replace(/:$/, '')
+            })
+          } else if (para.trim().length > 0) {
+            result.push({
+              type: 'paragraph',
+              content: applyBoldFormatting(para)
+            })
+          }
+        })
+      }
+      
+      // Add table
+      result.push({
+        type: 'table',
+        headers: tableData.headers,
+        rows: tableData.rows
+      })
+      
+      // Add content after table
+      const afterTableStartIdx = text.indexOf(text.split('\n')[tableData.endIdx]) + text.split('\n')[tableData.endIdx].length
+      const afterTable = text.substring(afterTableStartIdx).trim()
+      if (afterTable) {
+        const afterParagraphs = afterTable.split(/\n\n+/).filter(p => p.trim())
+        afterParagraphs.forEach((para) => {
+          if (para.trim().length > 0) {
+            result.push({
+              type: 'paragraph',
+              content: applyBoldFormatting(para)
+            })
+          }
+        })
+      }
+      
+      return result.filter(item => item && ((item.content && item.content.length > 0) || item.type === 'table' || item.type === 'list'))
+    }
+  }
   
   // If text contains numbered lists, extract and format them
   if (hasLists) {
