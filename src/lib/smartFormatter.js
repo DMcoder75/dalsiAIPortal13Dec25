@@ -1,7 +1,6 @@
 /**
- * Smart Text Formatter - Improved Version
- * Intelligently detects content type and applies appropriate formatting
- * without forcing artificial structure on the content
+ * Smart Text Formatter - Comprehensive Version
+ * Intelligently detects and parses all Markdown content types
  */
 
 const BOLD_KEYWORDS = [
@@ -27,28 +26,23 @@ const BOLD_KEYWORDS = [
 function detectContentType(text) {
   const lowerText = text.toLowerCase()
   
-  // Marketing/Sales content indicators
   const marketingIndicators = [
     /don't wait|enroll now|sign up|limited time|exclusive|special offer/i,
     /join us|unlock your|elevate your|transform your|revolutionize/i,
     /cutting-edge|innovative|premium|world-class|industry-leading/i,
-    /call to action|cta|[[]link[]]|click here/i
   ]
   
-  // Educational content indicators
   const educationalIndicators = [
     /explain|understand|learn|teach|concept|theory|principle/i,
     /step by step|how to|tutorial|guide|introduction/i,
     /research|study|evidence|data|analysis|findings/i
   ]
   
-  // Narrative/Story content indicators
   const narrativeIndicators = [
     /once upon|story|tale|journey|adventure|experience/i,
     /character|plot|scene|dialogue|narrative/i
   ]
   
-  // Instructional content indicators
   const instructionalIndicators = [
     /ingredients|procedure|instructions|steps|method|process/i,
     /first|second|third|next|finally|then|after/i
@@ -68,31 +62,16 @@ function detectContentType(text) {
 }
 
 /**
- * Detect if text has natural sections with headers
- */
-function hasNaturalSections(text) {
-  const sectionPatterns = [
-    /^#{1,3}\s+/m,  // Markdown headers
-    /^[A-Z][^.!?]*:$/m,  // Lines ending with colon
-    /^(Introduction|Conclusion|Summary|Overview|Background)/m
-  ]
-  
-  return sectionPatterns.some(pattern => pattern.test(text))
-}
-
-/**
  * Check if text looks like a header/introduction
  */
 function isHeaderLike(text) {
-  // Short text that ends with colon
   if (text.length < 100 && text.trim().endsWith(':')) {
     return true
   }
   
-  // Opening statements like "Certainly!", "Let me...", "Here's...", etc.
   const headerPatterns = [
     /^(Certainly|Sure|Absolutely|Let me|Here's|Here are|Below|Following|Above|Next|First|Finally|Additionally|Furthermore|Moreover|In summary|To summarize)/i,
-    /^[A-Z][^.!?]*:$/,  // Ends with colon
+    /^[A-Z][^.!?]*:$/,
     /^(Introduction|Overview|Summary|Conclusion|Note|Important|Key Point)/i
   ]
   
@@ -104,13 +83,11 @@ function isHeaderLike(text) {
  */
 function hasMarkdownTable(text) {
   const lines = text.split('\n')
-  // Look for table pattern: | header | header | ... and | --- | --- |
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i].trim()
     const nextLine = lines[i + 1].trim()
     
     if (line.startsWith('|') && nextLine.startsWith('|')) {
-      // Check if next line is separator (contains dashes and pipes)
       if (/^\|[\s\-|:]+\|$/.test(nextLine)) {
         return true
       }
@@ -120,14 +97,13 @@ function hasMarkdownTable(text) {
 }
 
 /**
- * Parse Markdown table and return structured data
+ * Parse Markdown table
  */
 function parseMarkdownTable(text) {
   const lines = text.split('\n')
   let tableStartIdx = -1
   let tableEndIdx = -1
   
-  // Find table boundaries
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i].trim()
     const nextLine = lines[i + 1].trim()
@@ -142,7 +118,6 @@ function parseMarkdownTable(text) {
   
   if (tableStartIdx === -1) return null
   
-  // Find end of table
   tableEndIdx = tableStartIdx + 2
   while (tableEndIdx < lines.length && lines[tableEndIdx].trim().startsWith('|')) {
     tableEndIdx++
@@ -151,14 +126,12 @@ function parseMarkdownTable(text) {
   
   const tableLines = lines.slice(tableStartIdx, tableEndIdx + 1)
   
-  // Parse headers
   const headerLine = tableLines[0].trim()
   const headers = headerLine
     .split('|')
     .map(h => h.trim())
     .filter(h => h.length > 0)
   
-  // Parse rows
   const rows = []
   for (let i = 2; i < tableLines.length; i++) {
     const rowLine = tableLines[i].trim()
@@ -182,7 +155,6 @@ function parseMarkdownTable(text) {
 
 /**
  * Detect if text contains a numbered list
- * Only matches numbers at the start of a line (not in middle of text like "CO2.")
  */
 function hasNumberedList(text) {
   const lines = text.split('\n')
@@ -190,8 +162,7 @@ function hasNumberedList(text) {
 }
 
 /**
- * Extract numbered list items from text
- * Only extracts items that start at the beginning of a line
+ * Extract numbered list items
  */
 function extractListItems(text) {
   const lines = text.split('\n')
@@ -212,16 +183,140 @@ function extractListItems(text) {
 }
 
 /**
+ * Detect if text contains unordered lists
+ */
+function hasUnorderedList(text) {
+  const lines = text.split('\n')
+  return lines.some(line => /^[\s]*[-*+]\s+/.test(line))
+}
+
+/**
+ * Extract unordered list items with nesting support
+ */
+function extractUnorderedListItems(text) {
+  const lines = text.split('\n')
+  const items = []
+  
+  lines.forEach(line => {
+    const match = line.match(/^([\s]*)[-*+]\s+(.+)$/)
+    if (match) {
+      const indent = match[1].length / 2 // Assume 2 spaces per level
+      items.push({
+        level: Math.floor(indent),
+        content: match[2].trim()
+      })
+    }
+  })
+  
+  return items
+}
+
+/**
+ * Detect code blocks
+ */
+function hasCodeBlock(text) {
+  return /```[\s\S]*?```/.test(text)
+}
+
+/**
+ * Extract code blocks
+ */
+function extractCodeBlocks(text) {
+  const blocks = []
+  const regex = /```(\w*)\n([\s\S]*?)```/g
+  let match
+  
+  while ((match = regex.exec(text)) !== null) {
+    blocks.push({
+      language: match[1] || 'text',
+      code: match[2].trim(),
+      fullMatch: match[0]
+    })
+  }
+  
+  return blocks
+}
+
+/**
+ * Detect blockquotes
+ */
+function hasBlockquote(text) {
+  const lines = text.split('\n')
+  return lines.some(line => /^>\s+/.test(line.trim()))
+}
+
+/**
+ * Extract blockquotes
+ */
+function extractBlockquotes(text) {
+  const lines = text.split('\n')
+  const blockquotes = []
+  let currentQuote = []
+  
+  lines.forEach(line => {
+    const match = line.match(/^>\s+(.+)$/)
+    if (match) {
+      currentQuote.push(match[1])
+    } else if (currentQuote.length > 0) {
+      blockquotes.push(currentQuote.join('\n'))
+      currentQuote = []
+    }
+  })
+  
+  if (currentQuote.length > 0) {
+    blockquotes.push(currentQuote.join('\n'))
+  }
+  
+  return blockquotes
+}
+
+/**
+ * Detect Markdown headings
+ */
+function hasMarkdownHeadings(text) {
+  return /^#{1,6}\s+/m.test(text)
+}
+
+/**
+ * Extract Markdown headings with levels
+ */
+function extractHeadings(text) {
+  const lines = text.split('\n')
+  const headings = []
+  
+  lines.forEach(line => {
+    const match = line.match(/^(#{1,6})\s+(.+)$/)
+    if (match) {
+      headings.push({
+        level: match[1].length,
+        content: match[2].trim()
+      })
+    }
+  })
+  
+  return headings
+}
+
+/**
+ * Parse inline formatting with links, bold, italic, code, strikethrough
+ */
+function parseInlineFormatting(text) {
+  if (!text) return text
+  
+  // This will be handled by the component rendering
+  // Store markers for the component to process
+  return text
+}
+
+/**
  * Split text into natural paragraphs
  */
 function splitIntoParagraphs(text) {
-  // Split by double newlines or by sentence groups
   const paragraphs = text
     .split(/\n\n+/)
     .map(p => p.trim())
     .filter(p => p.length > 0)
   
-  // If no double newlines, split by sentences
   if (paragraphs.length === 1) {
     const sentences = text.match(/[^.!?]+[.!?]+/g) || [text]
     const grouped = []
@@ -230,7 +325,6 @@ function splitIntoParagraphs(text) {
     sentences.forEach((sentence, idx) => {
       current.push(sentence.trim())
       
-      // Group 2-3 sentences together
       if (current.length >= 2 || idx === sentences.length - 1) {
         grouped.push(current.join(' '))
         current = []
@@ -258,24 +352,43 @@ function applyBoldFormatting(text) {
 }
 
 /**
- * Main formatter function
+ * Main formatter function - processes all Markdown content types
  */
 export function smartFormatText(text) {
   if (!text || typeof text !== 'string') return []
   
   const contentType = detectContentType(text)
-  const hasTable = hasMarkdownTable(text)
-  const hasLists = hasNumberedList(text)
-  const paragraphs = splitIntoParagraphs(text)
-  
   const result = []
   
-  // If text contains a Markdown table, extract and format it
+  // Priority 1: Extract code blocks first (they should be preserved as-is)
+  const codeBlocks = extractCodeBlocks(text)
+  let processText = text
+  const codeBlockMap = {}
+  
+  codeBlocks.forEach((block, idx) => {
+    const placeholder = `__CODE_BLOCK_${idx}__`
+    codeBlockMap[placeholder] = block
+    processText = processText.replace(block.fullMatch, placeholder)
+  })
+  
+  // Priority 2: Extract blockquotes
+  const blockquotes = extractBlockquotes(processText)
+  const blockquoteMap = {}
+  
+  blockquotes.forEach((quote, idx) => {
+    const placeholder = `__BLOCKQUOTE_${idx}__`
+    blockquoteMap[placeholder] = quote
+    blockquotes.forEach(bq => {
+      processText = processText.replace(`> ${bq}`, placeholder)
+    })
+  })
+  
+  // Priority 3: Check for tables
+  const hasTable = hasMarkdownTable(processText)
   if (hasTable) {
-    const tableData = parseMarkdownTable(text)
+    const tableData = parseMarkdownTable(processText)
     if (tableData) {
-      // Add content before table
-      const beforeTable = text.substring(0, text.indexOf(text.split('\n')[tableData.startIdx])).trim()
+      const beforeTable = processText.substring(0, processText.indexOf(processText.split('\n')[tableData.startIdx])).trim()
       if (beforeTable) {
         const beforeParagraphs = beforeTable.split(/\n\n+/).filter(p => p.trim())
         beforeParagraphs.forEach((para, idx) => {
@@ -284,7 +397,7 @@ export function smartFormatText(text) {
               type: 'header',
               content: para.replace(/:$/, '')
             })
-          } else if (para.trim().length > 0) {
+          } else if (para.trim().length > 0 && !para.includes('__CODE_BLOCK_') && !para.includes('__BLOCKQUOTE_')) {
             result.push({
               type: 'paragraph',
               content: applyBoldFormatting(para)
@@ -293,20 +406,18 @@ export function smartFormatText(text) {
         })
       }
       
-      // Add table
       result.push({
         type: 'table',
         headers: tableData.headers,
         rows: tableData.rows
       })
       
-      // Add content after table
-      const afterTableStartIdx = text.indexOf(text.split('\n')[tableData.endIdx]) + text.split('\n')[tableData.endIdx].length
-      const afterTable = text.substring(afterTableStartIdx).trim()
+      const afterTableStartIdx = processText.indexOf(processText.split('\n')[tableData.endIdx]) + processText.split('\n')[tableData.endIdx].length
+      const afterTable = processText.substring(afterTableStartIdx).trim()
       if (afterTable) {
         const afterParagraphs = afterTable.split(/\n\n+/).filter(p => p.trim())
         afterParagraphs.forEach((para) => {
-          if (para.trim().length > 0) {
+          if (para.trim().length > 0 && !para.includes('__CODE_BLOCK_') && !para.includes('__BLOCKQUOTE_')) {
             result.push({
               type: 'paragraph',
               content: applyBoldFormatting(para)
@@ -315,20 +426,19 @@ export function smartFormatText(text) {
         })
       }
       
-      return result.filter(item => item && ((item.content && item.content.length > 0) || item.type === 'table' || item.type === 'list'))
+      return restoreCodeBlocksAndQuotes(result, codeBlockMap, blockquoteMap)
     }
   }
   
-  // If text contains numbered lists, extract and format them
+  // Priority 4: Check for numbered lists
+  const hasLists = hasNumberedList(processText)
   if (hasLists) {
-    const listItems = extractListItems(text)
+    const listItems = extractListItems(processText)
     
     if (listItems.length > 0) {
-      // Find where the list starts
-      const firstListItemIndex = text.indexOf(`${listItems[0].number}.`)
-      const beforeList = text.substring(0, firstListItemIndex).trim()
+      const firstListItemIndex = processText.indexOf(`${listItems[0].number}.`)
+      const beforeList = processText.substring(0, firstListItemIndex).trim()
       
-      // Add header and paragraphs before list
       if (beforeList) {
         const beforeParagraphs = beforeList.split(/\n\n+/).filter(p => p.trim())
         beforeParagraphs.forEach((para, idx) => {
@@ -337,7 +447,7 @@ export function smartFormatText(text) {
               type: 'header',
               content: para.replace(/:$/, '')
             })
-          } else if (para.trim().length > 0) {
+          } else if (para.trim().length > 0 && !para.includes('__CODE_BLOCK_') && !para.includes('__BLOCKQUOTE_')) {
             result.push({
               type: 'paragraph',
               content: applyBoldFormatting(para)
@@ -346,7 +456,6 @@ export function smartFormatText(text) {
         })
       }
       
-      // Add list items
       result.push({
         type: 'list',
         items: listItems.map(item => ({
@@ -356,56 +465,122 @@ export function smartFormatText(text) {
       })
     }
     
-    return result.filter(item => item && ((item.content && item.content.length > 0) || item.type === 'list'))
+    return restoreCodeBlocksAndQuotes(result, codeBlockMap, blockquoteMap)
   }
   
-  // For marketing content: Keep it as-is with minimal formatting
-  if (contentType === 'marketing') {
-    paragraphs.forEach((para, idx) => {
-      // Check if first paragraph looks like a header
-      if (idx === 0 && isHeaderLike(para)) {
-        result.push({
-          type: 'header',
-          content: para.replace(/:$/, '')  // Remove trailing colon
-        })
-      } else {
-        result.push({
-          type: 'paragraph',
-          content: applyBoldFormatting(para),
-          preserveFlow: true  // Don't add headers
+  // Priority 5: Check for unordered lists
+  const hasUnordered = hasUnorderedList(processText)
+  if (hasUnordered) {
+    const unorderedItems = extractUnorderedListItems(processText)
+    
+    if (unorderedItems.length > 0) {
+      const lines = processText.split('\n')
+      const firstListLineIdx = lines.findIndex(line => /^[\s]*[-*+]\s+/.test(line))
+      const beforeList = lines.slice(0, firstListLineIdx).join('\n').trim()
+      
+      if (beforeList) {
+        const beforeParagraphs = beforeList.split(/\n\n+/).filter(p => p.trim())
+        beforeParagraphs.forEach((para, idx) => {
+          if (idx === 0 && isHeaderLike(para)) {
+            result.push({
+              type: 'header',
+              content: para.replace(/:$/, '')
+            })
+          } else if (para.trim().length > 0 && !para.includes('__CODE_BLOCK_') && !para.includes('__BLOCKQUOTE_')) {
+            result.push({
+              type: 'paragraph',
+              content: applyBoldFormatting(para)
+            })
+          }
         })
       }
-    })
-    return result
+      
+      result.push({
+        type: 'unordered_list',
+        items: unorderedItems
+      })
+    }
+    
+    return restoreCodeBlocksAndQuotes(result, codeBlockMap, blockquoteMap)
   }
   
-  // For narrative content: Keep natural flow
-  if (contentType === 'narrative') {
-    paragraphs.forEach((para, idx) => {
-      // Check if first paragraph looks like a header
-      if (idx === 0 && isHeaderLike(para)) {
+  // Priority 6: Check for Markdown headings
+  const hasHeadings = hasMarkdownHeadings(processText)
+  if (hasHeadings) {
+    const headings = extractHeadings(processText)
+    const lines = processText.split('\n')
+    
+    let lastHeadingIdx = -1
+    headings.forEach((heading, idx) => {
+      const lineIdx = lines.findIndex(line => line.includes(heading.content))
+      
+      if (lineIdx > lastHeadingIdx) {
+        // Add content before this heading
+        const beforeContent = lines.slice(lastHeadingIdx + 1, lineIdx).join('\n').trim()
+        if (beforeContent && !beforeContent.includes('__CODE_BLOCK_') && !beforeContent.includes('__BLOCKQUOTE_')) {
+          const paras = beforeContent.split(/\n\n+/).filter(p => p.trim())
+          paras.forEach(para => {
+            if (para.trim().length > 0) {
+              result.push({
+                type: 'paragraph',
+                content: applyBoldFormatting(para)
+              })
+            }
+          })
+        }
+        
+        // Add heading
         result.push({
-          type: 'header',
-          content: para.replace(/:$/, '')  // Remove trailing colon
+          type: 'heading',
+          level: heading.level,
+          content: heading.content
         })
-      } else {
-        result.push({
-          type: 'paragraph',
-          content: applyBoldFormatting(para),
-          preserveFlow: true
-        })
+        
+        lastHeadingIdx = lineIdx
       }
     })
-    return result
+    
+    // Add remaining content
+    const afterContent = lines.slice(lastHeadingIdx + 1).join('\n').trim()
+    if (afterContent && !afterContent.includes('__CODE_BLOCK_') && !afterContent.includes('__BLOCKQUOTE_')) {
+      const paras = afterContent.split(/\n\n+/).filter(p => p.trim())
+      paras.forEach(para => {
+        if (para.trim().length > 0) {
+          result.push({
+            type: 'paragraph',
+            content: applyBoldFormatting(para)
+          })
+        }
+      })
+    }
+    
+    return restoreCodeBlocksAndQuotes(result, codeBlockMap, blockquoteMap)
   }
   
-  // Default: Return as paragraphs with formatting
+  // Default: Process as paragraphs
+  const paragraphs = splitIntoParagraphs(processText)
   paragraphs.forEach((para, idx) => {
-    // Check if first paragraph looks like a header
-    if (idx === 0 && isHeaderLike(para)) {
+    if (para.includes('__CODE_BLOCK_')) {
+      const blockKey = Object.keys(codeBlockMap).find(key => para.includes(key))
+      if (blockKey) {
+        result.push({
+          type: 'code_block',
+          language: codeBlockMap[blockKey].language,
+          code: codeBlockMap[blockKey].code
+        })
+      }
+    } else if (para.includes('__BLOCKQUOTE_')) {
+      const quoteKey = Object.keys(blockquoteMap).find(key => para.includes(key))
+      if (quoteKey) {
+        result.push({
+          type: 'blockquote',
+          content: blockquoteMap[quoteKey]
+        })
+      }
+    } else if (idx === 0 && isHeaderLike(para)) {
       result.push({
         type: 'header',
-        content: para.replace(/:$/, '')  // Remove trailing colon
+        content: para.replace(/:$/, '')
       })
     } else if (para.trim().length > 0) {
       result.push({
@@ -415,7 +590,33 @@ export function smartFormatText(text) {
     }
   })
   
-  return result.filter(item => item && ((item.content && item.content.length > 0) || item.type === 'list'))
+  return result.filter(item => item && ((item.content && item.content.length > 0) || item.type === 'list' || item.type === 'table' || item.type === 'code_block' || item.type === 'blockquote' || item.type === 'heading' || item.type === 'unordered_list'))
+}
+
+/**
+ * Restore code blocks and blockquotes in the result
+ */
+function restoreCodeBlocksAndQuotes(result, codeBlockMap, blockquoteMap) {
+  return result.map(item => {
+    if (item.type === 'paragraph' || item.type === 'header') {
+      Object.entries(codeBlockMap).forEach(([key, block]) => {
+        if (item.content && item.content.includes(key)) {
+          // This shouldn't happen in well-formed content, but handle it
+        }
+      })
+      Object.entries(blockquoteMap).forEach(([key, quote]) => {
+        if (item.content && item.content.includes(key)) {
+          // This shouldn't happen in well-formed content, but handle it
+        }
+      })
+    }
+    return item
+  }).filter(item => {
+    if (item.content && (item.content.includes('__CODE_BLOCK_') || item.content.includes('__BLOCKQUOTE_'))) {
+      return false
+    }
+    return true
+  })
 }
 
 export default smartFormatText

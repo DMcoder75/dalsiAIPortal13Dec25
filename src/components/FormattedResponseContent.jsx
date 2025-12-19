@@ -1,41 +1,25 @@
 /**
  * FormattedResponseContent
- * Renders AI responses with professional formatting using React components
- * Applies justified text alignment, bold, italic, and Tailwind CSS styling
+ * Renders AI responses with comprehensive Markdown formatting
  */
 
 import React from 'react'
-import { smartFormatText, parseFormattedText } from '../lib/smartFormatter'
+import { smartFormatText } from '../lib/smartFormatter'
+import { parseInlineMarkdown, renderInlineMarkdown } from '../lib/inlineFormatter.jsx'
 import { Sparkles } from 'lucide-react'
 import TableRenderer from './TableRenderer'
+import CodeBlockRenderer from './CodeBlockRenderer'
+import BlockquoteRenderer from './BlockquoteRenderer'
+import UnorderedListRenderer from './UnorderedListRenderer'
 
 /**
- * Render formatted text with bold and italic
+ * Render formatted text with inline Markdown support
  */
 const renderFormattedText = (paragraph) => {
   if (!paragraph) return null
 
-  const parts = paragraph.split(/(\*\*.*?\*\*|\*.*?\*)/g)
-
-  return parts.map((part, idx) => {
-    if (!part) return null
-
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return (
-        <strong key={idx} className="font-bold text-white">
-          {part.slice(2, -2)}
-        </strong>
-      )
-    } else if (part.startsWith('*') && part.endsWith('*') && !part.startsWith('**')) {
-      return (
-        <em key={idx} className="italic text-white">
-          {part.slice(1, -1)}
-        </em>
-      )
-    } else {
-      return <span key={idx} className="text-white">{part}</span>
-    }
-  })
+  const parts = parseInlineMarkdown(paragraph)
+  return renderInlineMarkdown(parts)
 }
 
 /**
@@ -70,11 +54,60 @@ export const FormattedResponseContent = ({ text }) => {
           )
         }
 
+        // Handle code blocks
+        if (item.type === 'code_block') {
+          return (
+            <CodeBlockRenderer
+              key={idx}
+              language={item.language}
+              code={item.code}
+            />
+          )
+        }
+
+        // Handle blockquotes
+        if (item.type === 'blockquote') {
+          return (
+            <BlockquoteRenderer
+              key={idx}
+              content={item.content}
+            />
+          )
+        }
+
+        // Handle unordered lists
+        if (item.type === 'unordered_list') {
+          return (
+            <UnorderedListRenderer
+              key={idx}
+              items={item.items}
+            />
+          )
+        }
+
+        // Handle Markdown headings
+        if (item.type === 'heading') {
+          const headingClasses = {
+            1: 'text-2xl',
+            2: 'text-xl',
+            3: 'text-lg',
+            4: 'text-base',
+            5: 'text-sm',
+            6: 'text-xs'
+          }
+
+          return (
+            <div key={idx} className={`${headingClasses[item.level] || 'text-lg'} font-semibold text-white mt-6 mb-4 border-b border-purple-500/30 pb-3`}>
+              {renderFormattedText(item.content)}
+            </div>
+          )
+        }
+
         // Handle standalone headers
         if (item.type === 'header') {
           return (
             <h2 key={idx} className="text-lg font-semibold text-white mt-6 mb-4 border-b border-purple-500/30 pb-3">
-              {item.content}
+              {renderFormattedText(item.content)}
             </h2>
           )
         }
@@ -129,7 +162,7 @@ export const FormattedResponseContent = ({ text }) => {
             <div key={idx} className="space-y-4">
               {/* Section Header */}
               <h2 className="text-xl font-semibold text-white mt-6 mb-4 border-b border-purple-500/30 pb-3">
-                {item.header}
+                {renderFormattedText(item.header)}
               </h2>
 
               {/* Section Content - render each paragraph in the section */}
