@@ -306,7 +306,15 @@ export default function Experience() {
         }
         
         const onComplete = (content, sources, fullResponse) => {
-          response = fullResponse
+          // content is the actual AI response text
+          // fullResponse contains metadata (chat_id, is_continuation, etc.)
+          response = {
+            data: {
+              response: content || streamedContent,
+              sources: sources || [],
+              ...fullResponse  // Include metadata
+            }
+          }
           fullApiResponse = fullResponse
         }
         
