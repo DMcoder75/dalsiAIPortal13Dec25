@@ -64,6 +64,7 @@ export default function Experience() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [loadingConversations, setLoadingConversations] = useState(false)
   const [conversationEndpoint, setConversationEndpoint] = useState(null) // Track locked endpoint
+  const [conversationChatIds, setConversationChatIds] = useState({}) // Track chat_id per conversation
   const messagesEndRef = useRef(null)
 
   const models = [
@@ -286,60 +287,26 @@ export default function Experience() {
         sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       }
 
-      // Use intelligent API caller with continuation detection
-      let response
-      let fullApiResponse = null
+      // Detect continuation and get stored chat_id
+      const continuationKeywords = ['continue', 'next', 'more', 'go on', 'tell me more']
+      const isContinuation = continuationKeywords.some(kw => inputValue.toLowerCase().includes(kw))
+      const storedChatId = isContinuation ? conversationChatIds[sessionId] : null
       
+      logger.debug('🔍 [EXPERIENCE] Continuation:', isContinuation, 'ChatId:', !!storedChatId)
+      
+      // Use new AI generation service with auto-detection
+      let response
       try {
-        const serviceTypeMap = {
-          'general': 'general',
-          'education': 'edu',
-          'healthcare': 'healthcare',
-          'weather': 'weathersense',
-          'code': 'general'
-        }
-        const serviceType = serviceTypeMap[selectedModel] || 'general'
+        const shouldAutoDetect = !conversationEndpoint
         
-        let streamedContent = ''
-        const onToken = (token) => {
-          streamedContent += token
-        }
-        
-        const onComplete = (content, sources, fullResponse) => {
-          // content is the actual AI response text
-          // fullResponse contains metadata (chat_id, is_continuation, etc.)
-          response = {
-            data: {
-              response: content || streamedContent,
-              sources: sources || [],
-              ...fullResponse  // Include metadata
-            }
-          }
-          fullApiResponse = fullResponse
-        }
-        
-        const onError = (error) => {
-          logger.error('❌ [EXPERIENCE] API error:', error)
-          throw error
-        }
-        
-        await callAIWithIntelligentContinuation(
-          inputValue,
-          currentChat?.id || sessionId,
-          selectedModel,
-          serviceType,
-          onToken,
-          onComplete,
-          onError,
-          {
-            maxLength: 2048,
-            gradeLevel: selectedModel === 'education' ? 'general' : null
-          }
-        )
-        
-        if (!response) {
-          response = { data: { response: streamedContent } }
-        }
+        response = await smartGenerate(inputValue, {
+          mode: 'chat',
+          use_history: true,
+          session_id: sessionId,
+          autoDetect: shouldAutoDetect,
+          forceEndpoint: conversationEndpoint,
+          chat_id: storedChatId
+        })
       } catch (apiError) {
         logger.error('❌ [EXPERIENCE] API error:', apiError)
         throw apiError
@@ -356,6 +323,15 @@ export default function Experience() {
       let responseMode = 'chat'
 
       logger.info('📊 [EXPERIENCE] Full API response:', response)
+      
+      // Store chat_id for this conversation if provided
+      if (response.data?.chat_id) {
+        setConversationChatIds(prev => ({
+          ...prev,
+          [sessionId]: response.data.chat_id
+        }))
+        logger.info('💾 [EXPERIENCE] Stored chat_id for conversation:', response.data.chat_id)
+      }
 
       // Lock the endpoint for this conversation on first message
       if (!conversationEndpoint && response.category) {

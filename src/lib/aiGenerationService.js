@@ -64,7 +64,8 @@ export const generateAIResponse = async (message, options = {}) => {
       message,
       mode,
       use_history,
-      ...(session_id && { session_id })
+      ...(session_id && { session_id }),
+      ...(options.chat_id && { chat_id: options.chat_id })
     }
 
     logger.debug('📤 [AI_SERVICE] Request body:', body)
@@ -136,7 +137,8 @@ export const generateHealthcareResponse = async (message, options = {}) => {
       message,
       mode,
       use_history,
-      ...(session_id && { session_id })
+      ...(session_id && { session_id }),
+      ...(options.chat_id && { chat_id: options.chat_id })
     }
 
     logger.debug('📤 [AI_SERVICE] Healthcare request body:', body)
@@ -201,15 +203,14 @@ export const generateEducationResponse = async (message, options = {}) => {
     const authKey = await getApiKeyForRequest()
     const headers = buildHeaders(authKey)
 
-    // Build request body
+    // Build request body for education endpoint
     const body = {
       message,
       mode,
       use_history,
-      grade_level,
-      ...(session_id && { session_id })
+      ...(session_id && { session_id }),
+      ...(options.chat_id && { chat_id: options.chat_id })
     }
-
     logger.debug('📤 [AI_SERVICE] Education request body:', body)
 
     // Make API call
