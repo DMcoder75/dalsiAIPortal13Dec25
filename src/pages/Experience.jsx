@@ -98,10 +98,11 @@ export default function Experience() {
         
         // CRITICAL: Get API key and set it in dalsiAPI
         try {
-          const apiKey = await getApiKeyForRequest()
-          if (apiKey) {
-            dalsiAPI.setApiKey(apiKey)
-            logger.info('✅ [EXPERIENCE] API key set for requests')
+          const authKey = await getApiKeyForRequest()
+          if (authKey && authKey.value) {
+            // authKey is { type: 'api-key'|'bearer', value: string }
+            dalsiAPI.setApiKey(authKey.value)
+            logger.info('✅ [EXPERIENCE] API key set for requests:', authKey.type)
           } else {
             logger.warn('⚠️ [EXPERIENCE] No API key available')
           }
