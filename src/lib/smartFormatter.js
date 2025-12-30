@@ -339,16 +339,13 @@ function splitIntoParagraphs(text) {
 
 /**
  * Apply bold formatting to keywords
+ * DISABLED: This was causing random words to appear bold
+ * The inline formatter handles bold/italic formatting properly
  */
 function applyBoldFormatting(text) {
-  let formatted = text
-  
-  BOLD_KEYWORDS.forEach(keyword => {
-    const regex = new RegExp(`\\b${keyword}\\b`, 'gi')
-    formatted = formatted.replace(regex, `**${keyword}**`)
-  })
-  
-  return formatted
+  // DISABLED: Return text as-is without auto-bolding keywords
+  // This prevents words like 'website', 'industry', 'strategy' from being auto-bolded
+  return text
 }
 
 /**
