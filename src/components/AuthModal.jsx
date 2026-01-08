@@ -297,6 +297,49 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     }
   }
 
+
+  const handleGoogleProfileSubmit = async (profileData) => {
+    console.log('📝 [AUTH_MODAL] Submitting Google profile setup...')
+    setIsProcessingGoogle(true)
+    try {
+      const response = await fetch('https://api.neodalsi.com/api/auth/register-google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: profileData.email,
+          first_name: profileData.firstName,
+          last_name: profileData.lastName,
+          company_name: profileData.companyName || null,
+          google_id: googleData.sub,
+          profile_picture: googleData.picture,
+          email_verified: true
+        })
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Registration failed')
+      if (!data.success || !data.token || !data.user) throw new Error('Invalid response')
+      localStorage.setItem('jwt_token', data.token)
+      localStorage.setItem('user_info', JSON.stringify(data.user))
+      localStorage.setItem('user_type', 'registered')
+      try {
+        await migrateGuestConversations(data.user.id, data.token)
+      } catch (e) { console.error('Migration error:', e) }
+      try {
+        await subscriptionManager.createInitialSubscription(data.user.id)
+      } catch (e) { console.error('Subscription error:', e) }
+      try {
+        updateTrackerTier(data.user.subscription_tier || 'free')
+      } catch (e) { console.error('Rate limit error:', e) }
+      setSuccessMessage('Account created successfully!')
+      if (onSuccess) onSuccess()
+      onClose()
+      setTimeout(() => { window.location.reload() }, 1000)
+    } catch (error) {
+      console.error('❌ GOOGLE PROFILE ERROR:', error)
+      setError(error.message || 'Registration failed')
+      setIsProcessingGoogle(false)
+    }
+  }
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md bg-card border-border">
