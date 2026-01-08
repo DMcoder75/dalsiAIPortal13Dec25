@@ -6,7 +6,7 @@ import {
   saveTutorSession, 
   GRADE_LEVELS 
 } from '../lib/tutorService'
-import { FormattedResponseContent } from './FormattedResponseContent'
+import { FormattedResponseContentLight } from './FormattedResponseContentLight'
 import logger from '../lib/logger'
 
 export default function TutorModal({ isOpen, onClose, user }) {
@@ -287,7 +287,7 @@ export default function TutorModal({ isOpen, onClose, user }) {
               <div>
                 <h3 className="text-sm font-semibold text-foreground mb-2">Explanation: {explanation.topic}</h3>
                 <div className="text-sm text-foreground leading-relaxed">
-                  <FormattedResponseContent text={explanation.explanation} />
+                  <FormattedResponseContentLight text={explanation.explanation} />
                 </div>
               </div>
 
@@ -317,7 +317,7 @@ export default function TutorModal({ isOpen, onClose, user }) {
               <div>
                 <h3 className="text-sm font-semibold text-foreground mb-2">Practice Questions: {practiceQuestions.topic}</h3>
                 <div className="text-sm text-foreground leading-relaxed">
-                  <FormattedResponseContent text={practiceQuestions.questions} />
+                  <FormattedResponseContentLight text={practiceQuestions.questions} />
                 </div>
               </div>
 

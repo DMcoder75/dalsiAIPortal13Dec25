@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { X, Send, Loader, Copy, Download, Save, AlertCircle } from 'lucide-react'
 import { generateSummary, saveSummary, getSummaryHistory } from '../lib/summaryService'
-import { FormattedResponseContent } from './FormattedResponseContent'
+import { FormattedResponseContentLight } from './FormattedResponseContentLight'
 import logger from '../lib/logger'
 
 export default function SummaryModal({ isOpen, onClose, user }) {
@@ -210,7 +210,7 @@ export default function SummaryModal({ isOpen, onClose, user }) {
               <div>
                 <h3 className="text-sm font-semibold text-foreground mb-2">Generated Summary</h3>
                 <div className="text-sm text-foreground leading-relaxed">
-                  <FormattedResponseContent text={generatedSummary.summary} />
+                  <FormattedResponseContentLight text={generatedSummary.summary} />
                 </div>
               </div>
 

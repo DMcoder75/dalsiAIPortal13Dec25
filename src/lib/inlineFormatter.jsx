@@ -147,4 +147,65 @@ export function renderInlineMarkdown(parts) {
   })
 }
 
-export default { parseInlineMarkdown, renderInlineMarkdown }
+/**
+ * Render inline Markdown parts as React elements (light theme for modals)
+ */
+export function renderInlineMarkdownLight(parts) {
+  if (!parts) return null
+
+  return parts.map((part, idx) => {
+    switch (part.type) {
+      case 'text':
+        return <span key={idx}>{part.content}</span>
+
+      case 'bold':
+        return (
+          <strong key={idx} className="font-bold text-foreground">
+            {part.content}
+          </strong>
+        )
+
+      case 'italic':
+        return (
+          <em key={idx} className="italic text-muted-foreground">
+            {part.content}
+          </em>
+        )
+
+      case 'code':
+        return (
+          <code
+            key={idx}
+            className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono text-xs border border-border"
+          >
+            {part.content}
+          </code>
+        )
+
+      case 'strikethrough':
+        return (
+          <span key={idx} className="line-through text-muted-foreground">
+            {part.content}
+          </span>
+        )
+
+      case 'link':
+        return (
+          <a
+            key={idx}
+            href={part.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:text-primary/80 underline transition-colors"
+          >
+            {part.content}
+          </a>
+        )
+
+      default:
+        return <span key={idx}>{part.content}</span>
+    }
+  })
+}
+
+export default { parseInlineMarkdown, renderInlineMarkdown, renderInlineMarkdownLight }
